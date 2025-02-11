@@ -13,9 +13,9 @@ enum modes {
 var api_key = ""
 var max_tokens = 1024
 var temperature = 0.5
-var url = "https://api.openai.com/v1/chat/completions"
+var url = "https://api.groq.com/openai/v1/chat/completions"
 var headers = ["Content-Type: application/json", "Authorization: Bearer " + api_key]
-var engine = "gpt-3.5-turbo"
+var engine = "deepseek-r1-distill-qwen-32b"
 var chat_dock
 var http_request :HTTPRequest
 var current_mode
@@ -54,9 +54,9 @@ func on_settings_button_down():
 	
 	
 	if index == 0:
-		engine = "gpt-4"
+		engine = "deepseek-r1-distill-qwen-32b"
 	elif index == 1:
-		engine = "gpt-3.5-turbo"
+		engine = "qwen-2.5-32b"
 	print(engine)
 	settings_menu_close()
 	save_settings()
@@ -76,9 +76,9 @@ func set_settings(api_key, maxtokens, temp, engine):
 	settings_menu.get_node("HBoxContainer/VBoxContainer2/Temperature").text = str(temp)
 	var id = 0
 	
-	if engine == "gpt-4":
+	if engine == "deepseek-r1-distill-qwen-32b":
 		id == 0
-	elif engine == "gpt-3.5-turbo":
+	elif engine == "qwen-2.5-32b":
 		id == 1
 		
 	settings_menu.get_node("HBoxContainer/VBoxContainer2/OptionButton").select(id)
@@ -165,6 +165,15 @@ func _on_request_completed(result, responseCode, headers, body):
 		return
 	
 	var newStr = response.choices[0].message.content
+
+	# Remove <think>-block from the response using substr
+	var start = newStr.find("<think>")
+	if start != -1:
+		var end = newStr.find("</think>")
+		if end == -1:
+			end = newStr.length()
+		newStr = newStr.substr(0, start) + newStr.substr(end + 8)
+
 	if current_mode == modes.Chat:
 		add_to_chat("GPT: " + newStr)
 	elif current_mode == modes.Summarise:
@@ -183,7 +192,7 @@ func _on_request_completed(result, responseCode, headers, body):
 	elif current_mode == modes.Action:
 		code_editor.insert_line_at(cursor_pos, newStr)
 	elif current_mode == modes.Help:
-		add_to_chat("GPT: " + response.choices[0].text)
+		add_to_chat("GPT: " + newStr)
 	pass
 	
 func get_selected_code():
